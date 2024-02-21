@@ -1,4 +1,4 @@
-# ETHUSD price forecasting 
+# ETHUSD price forecasting using ARIMA and SARIMAX model
 
 This project aims to study cryptocurentcy ETHUSD price. I will uses ARIMA and SARIMAX for building the forecasts model.
 
