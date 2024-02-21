@@ -54,6 +54,8 @@ Let's see the steps for using the ARIMA model with time series data:
 Checking the data is stationary whether or not by using ADF (Augmented Dickey-Fuller) Test, if p-value < 0.05 then the data is stationary, if not the data must be diffrenced.
 
 ```
+from statsmodels.tsa.stattools import adfuller
+
 adf_res = adfuller(df['Close'], autolag = 'AIC')
 print('p-Values:' + str(adf_res[1]))
 ```
@@ -77,6 +79,7 @@ Stationary is checked!
 Next step, determining the order of the ARIMA model (p, d, q) based on the data's characteristics by GRID Search.
 
 ```
+from statsmodels.tsa.arima.model import ARIMA
 warnings.filterwarnings("ignore")
 
 # Test order for finding the lowest AIC
@@ -138,6 +141,7 @@ In this part I'll utilize auto_arima function to find the best parameters by set
 
 ```
 import pmdarima as pmd
+
 modelauto=pmd.auto_arima(data['Close'],start_p=1,start_q=1,test='adf',m=4,seasonal=True,trace=True)
 ```
 Best model:  ARIMA(1,1,0)(2,0,2)[4]   
