@@ -35,7 +35,9 @@ data = df[:round(len(df)*80/100)]
 test = df[round(len(df)*80/100)-1:]
 ```
 
-![traindata](https://github.com/jsutthida/ETHUSD/assets/160230541/796a8e28-d323-494d-a52b-cef321873630)
+![traindata](https://github.com/jsutthida/ETHUSD/assets/160230541/e182f12f-9ca6-492c-b2b7-46fb7947310c)
+![testdata](https://github.com/jsutthida/ETHUSD/assets/160230541/07804253-6016-445c-9079-1dd28c9ab2f2)
+
 
 ### ARIMA
 
@@ -45,19 +47,18 @@ Let's see the steps for using the ARIMA model with time series data:
 1. Set the index to the date or time column.
 2. Visualise the data and conduct the statistical tests.
 3. Make data stationary by diffrencing if applicable.
-4. Identify ARIMA model using ACF and PACF.
+4. Identify ARIMA model using ACF and PACF or using Auto ARIMA.
 5. Estimate ARIMA model peremeter (p,d,q).
 6. Choose most suitable ARIMA model.
 
-Checking the data is stationary or not by using ADF (Augmented Dickey-Fuller) Test, if p-value < 0.05 then the data is stationary, if not the data would be diffrenced.
+Checking the data is stationary whether or not by using ADF (Augmented Dickey-Fuller) Test, if p-value < 0.05 then the data is stationary, if not the data must be diffrenced.
 
 ```
 adf_res = adfuller(df['Close'], autolag = 'AIC')
 print('p-Values:' + str(adf_res[1]))
 ```
-```
-p-Values: 0.5959299049792007
-```
+
+p-Values is 0.5959299049792007
 
 According to the ADF test, p-Values > 0.05 so I have to convert it into a stationary data by diffrencing.
 
@@ -67,41 +68,40 @@ data_diff=data['Close'].diff(periods=1)
 adf_res = adfuller(data_diff.dropna(), autolag = 'AIC')
 print('p-Values:' + str(adf_res[1]))
 ```
-```
-p-Values: 1.0248692915096733e-18
-```
+
+p-Values is 1.0248692915096733e-18
 
 ![data diff](https://github.com/jsutthida/ETHUSD/assets/160230541/c47da8a7-008c-41a2-9ce2-8324a0708158)
 
 Stationary is checked! 
-Next step, determiinge the order of the ARIMA model (p, d, q) based on the data's characteristics.
+Next step, determining the order of the ARIMA model (p, d, q) based on the data's characteristics by GRID Search.
 
 ```
 warnings.filterwarnings("ignore")
 
-# Test all order
+# Test order for finding the lowest AIC
 p = d = q = range(0, 3)
 pdq = list(itertools.product(p, d, q))
 aic = []
 for param in pdq:
     try:
-        model = ARIMA(
-            data['Close'].dropna(),
-            order = param
-        ).fit()
+        model = ARIMA(data['Close'].dropna(),order = param).fit()
         print(f'Order: {param}')
         print(f'AIC: {model.aic:.4f}')
     except:
         continue
 ```
-Order: (1, 2, 2)
+The lowest AIC is Order: (1, 2, 2)
 AIC: 20805.8101
 
-The lowest AIC is (1,2,2) 
+Then fit this order to ARIMA model.
 
 ```
 arima=ARIMA(data['Close'],order=(1,2,2))
 predicted=arima.fit().predict();predicted
+
+arima1=ARIMA(test['Close'],order=(1,2,2))
+predicted1=arima1.fit().predict();predicted1
 
 plt.figure(figsize=(15,4))
 plt.plot(data['Close'],color='green',label='Actual')
@@ -111,13 +111,12 @@ plt.legend()
 ```
 ![traindata predict](https://github.com/jsutthida/ETHUSD/assets/160230541/ce5ea0a7-a3a8-41e0-b434-b09581aa2891)
 
-Train the ARIMA model, forecast the time series using return model_fit.forecast() and fit the model using print(model_fit.()).
-Analyse the model's performance
-
-MSE : 80.220206202715
+Training the ARIMA model, forecast the time series using return model.predict() and fit the model using model.fit().
+Analysing the model's performance by MSE.
 
 ```
-arima1.fit().predict(start=futureDate.index[0],end=futureDate.index[-1]).plot()
+predicted1=arima1.fit().predict(start=futureDate.index[0],end=futureDate.index[-1]);predicted1
+arima1.fit().predict(start=futureDate.index[0],end=futureDate.index[-1]).plot(color='orange')
 
 plt.figure(figsize=(15,4))
 plt.plot(test['Close'],color='green',label='Actual')
@@ -125,19 +124,25 @@ plt.plot(predicted1,color='orange',label='Predicted')
 plt.title('ETHUSD price history')
 plt.legend()
 ```
+
+MSE : 80.220206202715
+
 ![arimaforecast](https://github.com/jsutthida/ETHUSD/assets/160230541/92fc05a2-13f8-49fa-953b-b52795fd101e)
 
 ![arimaforecastall](https://github.com/jsutthida/ETHUSD/assets/160230541/12be1b17-1aa6-4795-8fdc-e6534cee8411)
 
 ### SARIMAX
 
-In this time Ill utilize Auto ARIMA function to find the best parameters by setting quaterly seasonal.
+SARIMAX (Seasonal Autoregressive Integrated Moving-Average with Exogenous Regressors) is a generalization of the ARIMA model that considers both seasonality and exogenous variables. 
+In this part I'll utilize auto_arima function to find the best parameters by setting quaterly seasonal.
 
 ```
 import pmdarima as pmd
 modelauto=pmd.auto_arima(data['Close'],start_p=1,start_q=1,test='adf',m=4,seasonal=True,trace=True)
 ```
 Best model:  ARIMA(1,1,0)(2,0,2)[4]   
+
+Training the SARIMAX model. Analysing the model's performance by MSE.
 
 ```
 from statsmodels.tsa.statespace.sarimax import SARIMAX
@@ -161,7 +166,7 @@ spredicted1=sarima1.fit().predict();spredicted1
 
 smodel.fit(test['Close'])
 pred1=smodel.predict(n_periods=15);pred1
-plt.plot(pred1)
+plt.plot(pred1, color='orange')
 ```
 
 ![sarimaforecast](https://github.com/jsutthida/ETHUSD/assets/160230541/199204bf-7e8c-4b62-80e2-f9284771338f)
